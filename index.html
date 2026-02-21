@@ -1474,29 +1474,6 @@ body.dark .ai-usage-dot.used { background: #4ade80; }
   letter-spacing: .5px;
 }
 
-/* Custom Exam Cards */
-.custom-exam-card{background:linear-gradient(135deg,#0A6E4E,#064A34);border-radius:16px;padding:18px;margin-bottom:12px;cursor:pointer;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
-.custom-exam-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(10,110,78,.25)}
-.custom-exam-card-accent{position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.06)}
-.custom-exam-tag{display:inline-block;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.5px;margin-bottom:8px}
-.custom-exam-name{font-family:'Playfair Display',serif;font-size:20px;color:#fff;margin-bottom:4px}
-.custom-exam-desc{font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;line-height:1.5}
-.custom-exam-pills{display:flex;flex-wrap:wrap;gap:6px}
-.custom-exam-pill{background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);font-size:11px;padding:4px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.15)}
-.custom-exam-lock{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;border-radius:16px}
-/* Admin exam management */
-.exam-mgmt-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border-radius:12px;margin-bottom:8px;gap:8px}
-.exam-mgmt-info{flex:1;min-width:0}
-.exam-mgmt-name{font-weight:700;font-size:14px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.exam-mgmt-meta{font-size:11px;color:var(--mt);margin-top:2px}
-.exam-mgmt-btns{display:flex;gap:6px;flex-shrink:0}
-.exam-mgmt-btn{padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600}
-.emb-edit{background:#EFF6FF;color:#1D4ED8}
-.emb-del{background:#FEF2F2;color:#DC2626}
-body.dark .exam-mgmt-row{background:#1a2920}
-body.dark .exam-mgmt-name{color:#e2ede8}
-body.dark .emb-edit{background:#1e2d40;color:#60a5fa}
-body.dark .emb-del{background:#2d1a1a;color:#f87171}
 /* Hospital question bank cards */
 .hosp-ycard {
   background: linear-gradient(135deg, #f5f3ff, #fff);
@@ -1832,9 +1809,6 @@ function loadDarkMode() {
       <button class="qbtn" onclick="startQuiz('2025','Paper 2')">2025<br>Paper 2</button>
       <button class="qbtn" onclick="startQuiz('2025','OSCE')">2025<br>OSCE</button>
     </div>
-
-    <!-- CUSTOM EXAMS (admin-created) -->
-    <div id="custom-exams-home"></div>
 
     <!-- COUNCIL MOCK EXAM CARD -->
     <div class="mock-home-card" id="mock-home-card" onclick="goMockExam()">
@@ -2673,7 +2647,6 @@ function loadDarkMode() {
     <button class="fchip" id="atab-students" onclick="switchAdminTab('students',this)" style="white-space:nowrap">👥 Students</button>
     <button class="fchip" id="atab-chat" onclick="switchAdminTab('chat',this)" style="white-space:nowrap">💬 Group Chat</button>
     <button class="fchip" id="atab-years" onclick="switchAdminTab('years',this)" style="white-space:nowrap">📅 Years</button>
-    <button class="fchip" id="atab-exams" onclick="switchAdminTab('exams',this)" style="white-space:nowrap">🗂️ Exams</button>
   </div>
   <div class="adm-body">
 
@@ -3079,77 +3052,13 @@ function loadDarkMode() {
         </div>
       </div>
 
-    <!-- EXAMS MANAGEMENT TAB -->
-    <div id="admtab-exams" style="display:none">
-
-      <!-- Create / Edit Exam -->
-      <div class="adcard" id="exam-form-card">
-        <div class="adtitle" id="exam-form-title">🗂️ Create New Exam</div>
-        <p style="font-size:13px;color:var(--mt);margin-bottom:14px">Add a standalone exam category students can practice (e.g. WAEC Nursing, NMC-UK CBT, State Board).</p>
-        <input type="hidden" id="exam-edit-id" value="">
-        <div class="fg">
-          <label class="fl">Exam Name <span style="color:var(--red)">*</span></label>
-          <input type="text" id="exam-name-inp" placeholder="e.g. WAEC Nursing 2025" maxlength="50">
-          <div class="err-field" id="exam-name-err"></div>
-        </div>
-        <div class="fg">
-          <label class="fl">Short Description</label>
-          <input type="text" id="exam-desc-inp" placeholder="e.g. WAEC GCE nursing theory questions" maxlength="80">
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <div class="fg" style="flex:1;min-width:100px;margin-bottom:0">
-            <label class="fl">Icon / Emoji</label>
-            <input type="text" id="exam-icon-inp" placeholder="📝" maxlength="4" style="text-align:center;font-size:22px">
-          </div>
-          <div class="fg" style="flex:1;min-width:100px;margin-bottom:0">
-            <label class="fl">Tag Label</label>
-            <input type="text" id="exam-tag-inp" placeholder="e.g. WAEC" maxlength="20">
-          </div>
-          <div class="fg" style="flex:1;min-width:100px;margin-bottom:0">
-            <label class="fl">Access</label>
-            <select id="exam-access-inp">
-              <option value="free">Free</option>
-              <option value="pro">Pro Only</option>
-            </select>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-          <button class="btn btn-green" style="flex:1;padding:13px" onclick="adminSaveExam()">💾 Save Exam</button>
-          <button class="btn btn-grey" style="max-width:100px;padding:13px;font-size:14px;display:none" id="exam-cancel-btn" onclick="adminCancelExamEdit()">Cancel</button>
-        </div>
-        <div id="exam-form-msg" style="margin-top:10px"></div>
-      </div>
-
-      <!-- Upload Questions to Exam -->
-      <div class="adcard" id="exam-upload-card" style="display:none">
-        <div class="adtitle">📤 Upload Questions to: <span id="exam-upload-name" style="color:var(--g)"></span></div>
-        <p style="font-size:13px;color:var(--mt);margin-bottom:12px">Paste or upload questions in standard format. These will be added to this exam's bank.</p>
-        <div class="fg">
-          <label class="fl">Upload File (.txt / .doc content)</label>
-          <input type="file" id="exam-qfile" accept=".txt,.doc,.docx,.pdf,.text" onchange="handleExamFileUpload(this)" style="padding:10px">
-        </div>
-        <div style="text-align:center;color:var(--mt);font-size:13px;margin:8px 0">— or paste below —</div>
-        <div class="fg">
-          <textarea class="parse-area" id="exam-qpaste" placeholder="1. Which of the following is a normal adult heart rate?&#10;A) 40-60 bpm  B) 60-100 bpm  C) 100-120 bpm  D) 50-90 bpm&#10;Answer: B&#10;Explanation: Normal adult heart rate is 60-100 bpm."></textarea>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-green" style="flex:1;padding:13px" onclick="adminParseExamQuestions()">📋 Parse Questions</button>
-          <button class="btn btn-grey" style="max-width:100px;padding:13px;font-size:14px" onclick="closeExamUpload()">✕ Close</button>
-        </div>
-        <div id="exam-parse-msg" style="margin-top:10px"></div>
-      </div>
-
-      <!-- All Exams List -->
-      <div class="adcard">
-        <div class="adtitle">📋 All Exams <span id="exams-count" style="font-size:12px;color:var(--mt);font-weight:400"></span></div>
-        <div id="exams-mgmt-list">
-          <p style="color:var(--mt);font-size:14px">No custom exams yet. Create one above!</p>
-        </div>
-      </div>
+    </div>
 
     </div>
 
-    </div><!-- end adm-body -->
+  </div>
+  <div style="padding:16px;border-top:1px solid var(--bd);background:#fff">
+    <button class="btn btn-red" style="width:100%;max-width:200px;margin:0 auto;font-size:14px;padding:12px" onclick="doAdminLogout()">🚪 Log Out Admin</button>
   </div>
 </div>
 
@@ -3730,7 +3639,7 @@ function go(page, isBack) {
     nextEl.style.opacity = ''; nextEl.style.transition = ''; nextEl.classList.add('on');
   }, 370);
   _curPage = page;
-  if (page === 'main') { renderYGrid(); renderMsgs(); updateHomeUI(); updateProfUI(); updateMockHomeCard(); updateContinueCard(); renderCustomExamCards(); }
+  if (page === 'main') { renderYGrid(); renderMsgs(); updateHomeUI(); updateProfUI(); updateMockHomeCard(); updateContinueCard(); }
   if (page === 'login') {
     // Restore saved credentials
     try {
@@ -3755,7 +3664,7 @@ function go(page, isBack) {
   if (page === 'exam-review') { renderExamReview(); }
   if (page === 'mock-lobby') { renderMockLobby(); }
   if (page === 'mock-answer-review') { renderMockAnswerReview('all'); }
-  if (page === 'admin') { renderCodesTab(); updateAdminSt(); renderAdminAnalytics(); renderAdminMockTab(); populateYearDropdowns(); renderYearsTab(); renderExamsTab(); }
+  if (page === 'admin') { renderCodesTab(); updateAdminSt(); renderAdminAnalytics(); renderAdminMockTab(); populateYearDropdowns(); renderYearsTab(); }
   if (page === 'referral') { renderReferralPage(); }
   if (page === 'bookmarks') { renderBookmarks(); }
 }
@@ -3771,7 +3680,7 @@ function switchTab(name, el) {
 }
 
 function switchAdminTab(name, el) {
-  ['codes','upload','view','mock','students','chat','csv','analytics','years','exams'].forEach(function(t){
+  ['codes','upload','view','mock','students','chat','csv','analytics','years'].forEach(function(t){
     var d = document.getElementById('admtab-'+t);
     if(d) d.style.display = 'none';
     var b = document.getElementById('atab-'+t);
@@ -3786,7 +3695,6 @@ function switchAdminTab(name, el) {
   if(name === 'mock') renderAdminMockTab();
   if(name === 'analytics') renderAdminAnalytics();
   if(name === 'years'){ populateYearDropdowns(); renderYearsTab(); }
-  if(name === 'exams'){ renderExamsTab(); }
   if(name === 'chat') {
     renderAdminMsgs();
     setTimeout(function(){ 
@@ -7347,277 +7255,6 @@ function loadScript(src, cb) {
 var DEFAULT_YEARS = ['2025','2024','2023','2022','2021','2020','2019','2018'];
 var customYears = []; // extra years added by admin
 
-// =========================================================
-// CUSTOM EXAMS — admin-created standalone exam categories
-// =========================================================
-var customExams = []; // [{id, name, desc, icon, tag, access, questions:[]}]
-
-function saveCustomExams() {
-  try { localStorage.setItem('np_custom_exams', JSON.stringify(customExams)); } catch(x){}
-}
-function loadCustomExams() {
-  try {
-    var d = localStorage.getItem('np_custom_exams');
-    if(d) customExams = JSON.parse(d);
-  } catch(x){}
-}
-
-function renderExamsTab() {
-  var listEl = document.getElementById('exams-mgmt-list');
-  var countEl = document.getElementById('exams-count');
-  if(!listEl) return;
-  if(countEl) countEl.textContent = '(' + customExams.length + ' exam' + (customExams.length !== 1 ? 's' : '') + ')';
-  if(customExams.length === 0) {
-    listEl.innerHTML = '<p style="color:var(--mt);font-size:14px">No custom exams yet. Create one above!</p>';
-    return;
-  }
-  listEl.innerHTML = customExams.map(function(ex) {
-    var qc = (ex.questions || []).length;
-    return '<div class="exam-mgmt-row">' +
-      '<div style="font-size:24px;margin-right:10px;flex-shrink:0">' + (ex.icon || '📝') + '</div>' +
-      '<div class="exam-mgmt-info">' +
-        '<div class="exam-mgmt-name">' + ex.name + '</div>' +
-        '<div class="exam-mgmt-meta">' + qc + ' question' + (qc !== 1 ? 's' : '') +
-          ' · ' + (ex.tag || '') +
-          ' · <span style="color:' + (ex.access === 'pro' ? 'var(--gold)' : 'var(--ok)') + '">' +
-          (ex.access === 'pro' ? '🔒 Pro' : '✅ Free') + '</span></div>' +
-      '</div>' +
-      '<div class="exam-mgmt-btns">' +
-        '<button class="exam-mgmt-btn emb-edit" onclick="adminEditExam(\'' + ex.id + '\')">✏️</button>' +
-        '<button class="exam-mgmt-btn emb-edit" style="background:#f0f9f4;color:#166534" onclick="adminUploadToExam(\'' + ex.id + '\')">📤</button>' +
-        '<button class="exam-mgmt-btn emb-del" onclick="adminDeleteExam(\'' + ex.id + '\')">🗑️</button>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-  // Also re-render student-facing custom exam cards
-  renderCustomExamCards();
-}
-
-function adminSaveExam() {
-  var nameInp = document.getElementById('exam-name-inp');
-  var descInp = document.getElementById('exam-desc-inp');
-  var iconInp = document.getElementById('exam-icon-inp');
-  var tagInp  = document.getElementById('exam-tag-inp');
-  var accInp  = document.getElementById('exam-access-inp');
-  var editId  = document.getElementById('exam-edit-id').value;
-  var msgEl   = document.getElementById('exam-form-msg');
-  var errEl   = document.getElementById('exam-name-err');
-
-  errEl.textContent = '';
-  msgEl.innerHTML = '';
-
-  var name = (nameInp.value || '').trim();
-  if(!name) { errEl.textContent = '⚠ Exam name is required.'; return; }
-  if(name.length > 50) { errEl.textContent = '⚠ Name too long (max 50 chars).'; return; }
-
-  // Check duplicate names (excluding self when editing)
-  var dup = customExams.find(function(e){ return e.name.toLowerCase() === name.toLowerCase() && e.id !== editId; });
-  if(dup) { errEl.textContent = '⚠ An exam with that name already exists.'; return; }
-
-  if(editId) {
-    // Edit existing
-    var ex = customExams.find(function(e){ return e.id === editId; });
-    if(ex) {
-      ex.name    = name;
-      ex.desc    = (descInp.value || '').trim();
-      ex.icon    = (iconInp.value || '📝').trim() || '📝';
-      ex.tag     = (tagInp.value || '').trim().toUpperCase();
-      ex.access  = accInp.value;
-    }
-    msgEl.innerHTML = '<div class="al al-ok">✅ Exam updated!</div>';
-  } else {
-    // Create new
-    var newEx = {
-      id:        'exam_' + Date.now(),
-      name:      name,
-      desc:      (descInp.value || '').trim(),
-      icon:      (iconInp.value || '📝').trim() || '📝',
-      tag:       (tagInp.value || '').trim().toUpperCase(),
-      access:    accInp.value,
-      questions: []
-    };
-    customExams.push(newEx);
-    msgEl.innerHTML = '<div class="al al-ok">✅ <strong>' + name + '</strong> created! Upload questions using the 📤 button.</div>';
-  }
-
-  saveCustomExams();
-  renderExamsTab();
-
-  // Reset form
-  nameInp.value = '';
-  descInp.value = '';
-  iconInp.value = '';
-  tagInp.value = '';
-  accInp.value = 'free';
-  document.getElementById('exam-edit-id').value = '';
-  document.getElementById('exam-form-title').textContent = '🗂️ Create New Exam';
-  document.getElementById('exam-cancel-btn').style.display = 'none';
-}
-
-function adminEditExam(id) {
-  var ex = customExams.find(function(e){ return e.id === id; });
-  if(!ex) return;
-  document.getElementById('exam-edit-id').value  = id;
-  document.getElementById('exam-name-inp').value = ex.name;
-  document.getElementById('exam-desc-inp').value = ex.desc || '';
-  document.getElementById('exam-icon-inp').value = ex.icon || '';
-  document.getElementById('exam-tag-inp').value  = ex.tag || '';
-  document.getElementById('exam-access-inp').value = ex.access || 'free';
-  document.getElementById('exam-form-title').textContent = '✏️ Edit Exam';
-  document.getElementById('exam-cancel-btn').style.display = '';
-  document.getElementById('exam-form-msg').innerHTML = '';
-  document.getElementById('exam-name-err').textContent = '';
-  document.getElementById('exam-form-card').scrollIntoView({ behavior: 'smooth' });
-}
-
-function adminCancelExamEdit() {
-  document.getElementById('exam-edit-id').value = '';
-  document.getElementById('exam-name-inp').value = '';
-  document.getElementById('exam-desc-inp').value = '';
-  document.getElementById('exam-icon-inp').value = '';
-  document.getElementById('exam-tag-inp').value = '';
-  document.getElementById('exam-access-inp').value = 'free';
-  document.getElementById('exam-form-title').textContent = '🗂️ Create New Exam';
-  document.getElementById('exam-cancel-btn').style.display = 'none';
-  document.getElementById('exam-form-msg').innerHTML = '';
-  document.getElementById('exam-name-err').textContent = '';
-}
-
-function adminDeleteExam(id) {
-  var ex = customExams.find(function(e){ return e.id === id; });
-  if(!ex) return;
-  var qc = (ex.questions || []).length;
-  var warn = 'Delete "' + ex.name + '"?' + (qc > 0 ? ' This will remove ' + qc + ' question(s).' : '') + ' This cannot be undone.';
-  if(!confirm(warn)) return;
-  customExams = customExams.filter(function(e){ return e.id !== id; });
-  saveCustomExams();
-  renderExamsTab();
-  toast('🗑️ Exam "' + ex.name + '" deleted.');
-}
-
-var _examUploadTargetId = null;
-
-function adminUploadToExam(id) {
-  var ex = customExams.find(function(e){ return e.id === id; });
-  if(!ex) return;
-  _examUploadTargetId = id;
-  document.getElementById('exam-upload-name').textContent = ex.name;
-  document.getElementById('exam-upload-card').style.display = '';
-  document.getElementById('exam-qpaste').value = '';
-  document.getElementById('exam-qfile').value = '';
-  document.getElementById('exam-parse-msg').innerHTML = '';
-  document.getElementById('exam-upload-card').scrollIntoView({ behavior: 'smooth' });
-}
-
-function closeExamUpload() {
-  document.getElementById('exam-upload-card').style.display = 'none';
-  _examUploadTargetId = null;
-}
-
-function handleExamFileUpload(inp) {
-  var file = inp.files[0];
-  if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    document.getElementById('exam-qpaste').value = e.target.result;
-  };
-  reader.readAsText(file);
-}
-
-function adminParseExamQuestions() {
-  if(!_examUploadTargetId) return;
-  var ex = customExams.find(function(e){ return e.id === _examUploadTargetId; });
-  if(!ex) return;
-  var raw = document.getElementById('exam-qpaste').value;
-  var msgEl = document.getElementById('exam-parse-msg');
-  if(!raw.trim()) { msgEl.innerHTML = '<div class="al al-err">⚠ Please paste some questions first.</div>'; return; }
-
-  // Re-use the existing parser
-  var parsed = parseQuestions(raw);
-  if(!parsed || parsed.length === 0) {
-    msgEl.innerHTML = '<div class="al al-err">⚠ Could not parse any questions. Check the format.</div>';
-    return;
-  }
-  if(!ex.questions) ex.questions = [];
-  var before = ex.questions.length;
-  parsed.forEach(function(q) { ex.questions.push(q); });
-  saveCustomExams();
-  renderExamsTab();
-  msgEl.innerHTML = '<div class="al al-ok">✅ Added <strong>' + parsed.length + '</strong> questions to "' + ex.name + '". Total: ' + ex.questions.length + '</div>';
-  toast('✅ ' + parsed.length + ' Qs added to ' + ex.name);
-}
-
-// Render custom exam cards on the student home screen
-function renderCustomExamCards() {
-  var container = document.getElementById('custom-exams-home');
-  if(!container) return;
-  if(!customExams || customExams.length === 0) {
-    container.innerHTML = '';
-    return;
-  }
-  container.innerHTML = customExams.map(function(ex) {
-    var qc = (ex.questions || []).length;
-    var locked = ex.access === 'pro' && !isPro;
-    return '<div class="custom-exam-card" onclick="startCustomExam(\'' + ex.id + '\')">' +
-      '<div class="custom-exam-card-accent"></div>' +
-      (ex.tag ? '<div class="custom-exam-tag">' + ex.tag + '</div>' : '') +
-      '<div class="custom-exam-name">' + (ex.icon || '📝') + ' ' + ex.name + '</div>' +
-      (ex.desc ? '<div class="custom-exam-desc">' + ex.desc + '</div>' : '') +
-      '<div class="custom-exam-pills">' +
-        '<span class="custom-exam-pill">📋 ' + qc + ' Questions</span>' +
-        (ex.access === 'pro' ? '<span class="custom-exam-pill">🔒 Pro</span>' : '<span class="custom-exam-pill">✅ Free</span>') +
-      '</div>' +
-      (locked ? '<div class="custom-exam-lock"><div style="text-align:center;color:#fff"><div style="font-size:28px;margin-bottom:4px">🔒</div><div style="font-size:12px;font-weight:700">Pro Required</div></div></div>' : '') +
-    '</div>';
-  }).join('');
-}
-
-function startCustomExam(id) {
-  var ex = customExams.find(function(e){ return e.id === id; });
-  if(!ex) return;
-  var qc = (ex.questions || []).length;
-
-  if(ex.access === 'pro' && !isPro) {
-    go('payment');
-    toast('🔒 Pro access required for ' + ex.name);
-    return;
-  }
-  if(qc === 0) {
-    toast('⚠ No questions uploaded for this exam yet.');
-    return;
-  }
-
-  // Launch quiz using the existing quiz engine
-  // We'll use year = ex.id, paper = ex.name as identifiers
-  var qs = ex.questions.slice();
-  // Shuffle
-  for(var i = qs.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var tmp = qs[i]; qs[i] = qs[j]; qs[j] = tmp;
-  }
-
-  QQ = qs;
-  QI = 0;
-  QScore = 0;
-  QYear = ex.name;
-  QPaper = ex.tag || 'Exam';
-  QAnsed = false;
-  QSessAns = 0;
-  QMode = 'review';
-  QAnswers = [];
-  saveLastQuizState();
-
-  var msTitle = document.getElementById('ms-title');
-  var msSub   = document.getElementById('ms-sub');
-  if(msTitle) msTitle.textContent = ex.name;
-  if(msSub)   msSub.textContent = qc + ' questions available';
-
-  QPendingYear  = ex.name;
-  QPendingPaper = ex.tag || 'Exam';
-
-  go('mode-select');
-}
-
 function saveCustomYears() {
   try { localStorage.setItem('np_custom_years', JSON.stringify(customYears)); } catch(x){}
 }
@@ -8880,11 +8517,9 @@ loadMockSchedule();
 loadDarkMode();
 loadBookmarks();
 loadLastQuizState();
-loadCustomExams();
 startRotationWatcher();
 // Show continue card if there's history
 setTimeout(updateContinueCard, 100);
-setTimeout(renderCustomExamCards, 150);
 
 // Add admin login link to splash page discreetly
 (function(){
