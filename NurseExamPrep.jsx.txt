@@ -1,0 +1,941 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+
+// ── FONTS ─────────────────────────────────────────────────────────────────────
+const FontLink = () => (
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800;900&display=swap" rel="stylesheet" />
+);
+
+// ── DEFAULT DATA ──────────────────────────────────────────────────────────────
+const DEFAULT_QUESTIONS = [
+  { id: 1, category: "Pharmacology", difficulty: "Medium", question: "A patient is prescribed digoxin 0.125 mg daily. Before administration, the nurse checks the apical pulse for one full minute. Which finding should prompt the nurse to WITHHOLD the dose and notify the physician?", options: ["Pulse of 72 bpm, regular rhythm","Pulse of 58 bpm, irregular rhythm","Pulse of 88 bpm, regular rhythm","Pulse of 92 bpm, irregular rhythm"], answer: 1, explanation: "Digoxin should be withheld if the apical pulse is below 60 bpm (adult) or if an irregular rhythm is noted, as it can worsen bradycardia and heart block." },
+  { id: 2, category: "Medical-Surgical", difficulty: "Hard", question: "A nurse is caring for a client post-appendectomy. Which assessment finding 24 hours post-op is MOST concerning?", options: ["Temperature of 37.6°C (99.7°F)","Serosanguineous drainage on dressing","Absence of bowel sounds","Rigid, board-like abdomen"], answer: 3, explanation: "A rigid board-like abdomen after appendectomy indicates peritonitis — a surgical emergency requiring immediate physician notification." },
+  { id: 3, category: "Maternal-Newborn", difficulty: "Medium", question: "A nurse assesses a newborn 1 minute after delivery. The infant has a heart rate of 95 bpm, weak cry, some flexion, grimace to suction, and a pink body with blue extremities. What is the APGAR score?", options: ["5","6","7","8"], answer: 1, explanation: "HR <100 (1), Weak cry (1), Some flexion (1), Grimace only (1), Acrocyanosis (1) = 6. Each category scored 0–2." },
+  { id: 4, category: "Fundamentals", difficulty: "Easy", question: "When performing nasogastric tube placement verification, which method is considered MOST reliable?", options: ["Auscultation of air insufflation","Checking pH of aspirate","Observing for bubbling in water","Confirming patient comfort"], answer: 1, explanation: "Checking the pH of gastric aspirate (pH ≤ 5.5) is the most reliable bedside method." },
+  { id: 5, category: "Psychiatric", difficulty: "Hard", question: "A client on a psychiatric unit tells the nurse, 'I've decided to end it all tonight. I have a plan.' What is the nurse's PRIORITY action?", options: ["Notify the physician immediately","Document the statement in the chart","Ask the client to promise not to harm themselves","Remove all potentially harmful objects from the room"], answer: 0, explanation: "The immediate priority is notifying the physician. The client has expressed suicidal ideation with a specific plan — this is a psychiatric emergency." },
+  { id: 6, category: "Pharmacology", difficulty: "Hard", question: "A nurse is preparing to administer IV potassium chloride (KCl). Which action is ESSENTIAL?", options: ["Administer as an IV bolus for rapid correction","Dilute and infuse no faster than 10 mEq/hour peripherally","Mix with normal saline in a 500 mL bag only","Monitor urine output after administration only"], answer: 1, explanation: "IV KCl must NEVER be given as a bolus — it can cause fatal cardiac dysrhythmias. The safe peripheral infusion rate is ≤10 mEq/hour." },
+  { id: 7, category: "Pediatrics", difficulty: "Hard", question: "A 2-year-old child is brought to the ER with stridor, drooling, and tripod positioning. The nurse suspects epiglottitis. What is the PRIORITY nursing action?", options: ["Obtain a throat culture","Place the child supine and prepare intubation equipment","Keep the child calm and upright; do not examine the throat","Administer humidified oxygen by face mask"], answer: 2, explanation: "In suspected epiglottitis, examining the throat or placing the child supine can cause complete airway obstruction." },
+  { id: 8, category: "Medical-Surgical", difficulty: "Medium", question: "A client with COPD is receiving oxygen therapy. The nurse notes the respiratory rate has decreased from 18 to 10 breaths/min. What is the MOST likely cause?", options: ["Improvement in oxygenation status","Hypoxic drive suppression from high-flow oxygen","CO2 narcosis from retained carbon dioxide","Side effect of bronchodilator therapy"], answer: 1, explanation: "COPD patients often rely on hypoxic drive to stimulate breathing. High-flow oxygen can suppress this drive, causing respiratory depression." },
+];
+
+const DEFAULT_FLASHCARDS = [
+  { id: 1, front: "Normal Adult Heart Rate", back: "60–100 bpm\n\nBelow 60 = Bradycardia\nAbove 100 = Tachycardia", category: "Vitals" },
+  { id: 2, front: "Normal Adult Blood Pressure", back: "Systolic: 90–120 mmHg\nDiastolic: 60–80 mmHg\n\nHypertensive Crisis: >180/120 mmHg", category: "Vitals" },
+  { id: 3, front: "Normal Adult Respiratory Rate", back: "12–20 breaths/min\n\n< 12 = Bradypnea\n> 20 = Tachypnea", category: "Vitals" },
+  { id: 4, front: "Normal Adult Temperature", back: "36.1°C – 37.2°C (97°F – 99°F)\n\nFever: > 38°C (100.4°F)\nHypothermia: < 35°C (95°F)", category: "Vitals" },
+  { id: 5, front: "APGAR Score Components", back: "A – Appearance (color)\nP – Pulse (heart rate)\nG – Grimace (reflex irritability)\nA – Activity (muscle tone)\nR – Respiration\n\nScored 0–2 each. 7–10 = Normal", category: "Maternal-Newborn" },
+  { id: 6, front: "Signs of Increased ICP", back: "• Cushing's Triad: Hypertension + Bradycardia + Irregular respirations\n• Headache (worse in morning)\n• Vomiting (projectile, no nausea)\n• Altered LOC\n• Pupil changes", category: "Neurological" },
+  { id: 7, front: "Pain Assessment: OLDCART", back: "O – Onset\nL – Location\nD – Duration\nC – Characteristics\nA – Aggravating factors\nR – Relieving factors\nT – Treatment tried", category: "Fundamentals" },
+  { id: 8, front: "Normal Serum Potassium", back: "3.5 – 5.0 mEq/L\n\nHypokalemia: < 3.5 (muscle weakness, arrhythmias)\nHyperkalemia: > 5.0 (peaked T waves, bradycardia)", category: "Lab Values" },
+  { id: 9, front: "Glasgow Coma Scale (GCS)", back: "Eyes: 1–4\nVerbal: 1–5\nMotor: 1–6\n\nTotal: 3–15\nSevere TBI: ≤ 8\nMild TBI: 13–15", category: "Neurological" },
+  { id: 10, front: "Stages of Shock", back: "1. Compensatory – BP maintained\n2. Progressive – BP drops, organ perfusion ↓\n3. Irreversible – Multi-organ failure\n\nKey early sign: Restlessness, ↑HR, cool/clammy skin", category: "Medical-Surgical" },
+];
+
+const DEFAULT_NOTES = [
+  { id: 1, title: "Cardiac Emergencies", icon: "♥", color: "#e74c6c", content: "**Myocardial Infarction (MI)**\nClassic symptoms: Chest pain radiating to left arm/jaw, diaphoresis, nausea, shortness of breath.\nWomen may present atypically: fatigue, back pain, indigestion.\n\n**MONA Protocol (First-line treatment):**\n• Morphine – pain relief, reduces preload\n• Oxygen – only if SpO2 < 94%\n• Nitrates – vasodilation (contraindicated if right-sided MI or Viagra use)\n• Aspirin – platelet aggregation inhibition\n\n**ECG Changes:**\n• STEMI: ST elevation in ≥2 contiguous leads (>1mm limb, >2mm precordial)\n• NSTEMI: ST depression or T-wave inversion\n• Hyperacute T-waves: earliest sign of ischemia" },
+  { id: 2, title: "Fluid & Electrolyte Balance", icon: "⚗", color: "#3498db", content: "**Isotonic Fluids (same osmolarity as plasma ~285–295 mOsm/L):**\n• 0.9% Normal Saline – volume expansion, no cell shifting\n• Lactated Ringer's – preferred for burns, trauma\n• 5% Dextrose in Water (D5W) – isotonic in bag, hypotonic once metabolized\n\n**Hypertonic Fluids:**\n• 3% Saline – severe hyponatremia (use with caution — risk of osmotic demyelination)\n\n**Hyponatremia (Na⁺ < 135 mEq/L):**\nSigns: Confusion, headache, seizures, coma\nCorrection: Fluid restriction (SIADH), hypertonic saline for severe cases\n\n**Hypernatremia (Na⁺ > 145 mEq/L):**\nSigns: Thirst, dry mucous membranes, confusion, seizures\nCorrection: Hypotonic fluids, free water replacement (slowly!)" },
+  { id: 3, title: "Medication Safety", icon: "💊", color: "#9b59b6", content: "**Rights of Medication Administration:**\n• Right Patient, Right Drug, Right Dose, Right Route, Right Time\n• Right Documentation, Right Reason, Right Response\n\n**High-Alert Medications (ISMP list):**\n• Anticoagulants (Heparin, Warfarin)\n• Insulin (always double-check)\n• Concentrated electrolytes (KCl, MgSO4)\n• Opioids\n• Chemotherapy agents\n\n**Look-alike/Sound-alike Drugs (LASA):**\n• Celebrex vs Celexa vs Cerebyx\n• Hydroxyzine vs Hydralazine\n• Metformin vs Metronidazole" },
+  { id: 4, title: "Prioritization Frameworks", icon: "⭐", color: "#f39c12", content: "**ABC Priority (Airway > Breathing > Circulation):**\nAlways address airway first unless the patient is in cardiac arrest (then CAB).\n\n**Maslow's Hierarchy in Nursing:**\nPhysiological needs first → Safety → Love/Belonging → Esteem → Self-actualization\n\n**SBAR Communication Tool:**\n• S – Situation: What is happening?\n• B – Background: What is the clinical context?\n• A – Assessment: What do you think the problem is?\n• R – Recommendation: What do you want done?\n\n**Triage Categories (START system):**\n• Immediate (Red) – Life-threatening, salvageable\n• Delayed (Yellow) – Serious but stable\n• Minor (Green) – Walking wounded\n• Expectant (Black) – Unsurvivable or deceased" },
+];
+
+const DEFAULT_SETTINGS = {
+  siteName: "NurseExamPrep",
+  siteSubtitle: "Nursing Council",
+  accentColor: "#00d4b4",
+  secondaryColor: "#6c63ff",
+  passMarkPercent: 70,
+  showDifficulty: true,
+  shuffleQuestions: false,
+  timerEnabled: false,
+  timerMinutes: 30,
+  announcementText: "",
+  announcementEnabled: false,
+  adminPassword: "admin123",
+};
+
+// ── STORAGE HOOK ──────────────────────────────────────────────────────────────
+function useStorage(key, defaultValue) {
+  const [value, setValue] = useState(() => {
+    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : defaultValue; } catch { return defaultValue; }
+  });
+  const set = useCallback((v) => {
+    setValue(prev => {
+      const next = typeof v === "function" ? v(prev) : v;
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [key]);
+  return [value, set];
+}
+
+// ── PASTE PARSER ──────────────────────────────────────────────────────────────
+function parsePastedQuestions(text) {
+  const results = [];
+  const blocks = text.split(/\n(?=(?:Question\s+\d+|Q\d+\.|\d+[\.\)])\s)/i).filter(b => b.trim());
+  for (const block of blocks) {
+    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length < 3) continue;
+    const qLine = lines[0].replace(/^(?:Question\s+\d+[:.]?|Q\d+[.:]?|\d+[\.)]\s*)/i, '').trim();
+    const optionLines = lines.filter(l => /^[A-Da-d][.)]\s/.test(l));
+    const options = optionLines.map(l => l.replace(/^[A-Da-d][.)]\s*/, '').trim());
+    if (options.length < 2) continue;
+    const answerLine = lines.find(l => /^(?:Answer|Correct Answer|Ans)[:\s]/i.test(l));
+    let answerIdx = 0;
+    if (answerLine) { const m = answerLine.match(/[A-Da-d]/); if (m) answerIdx = m[0].toUpperCase().charCodeAt(0) - 65; }
+    const expLine = lines.find(l => /^(?:Explanation|Rationale|Reason)[:\s]/i.test(l));
+    const explanation = expLine ? expLine.replace(/^(?:Explanation|Rationale|Reason)[:\s]*/i, '').trim() : '';
+    const catLine = lines.find(l => /^(?:Category|Topic|Subject)[:\s]/i.test(l));
+    const category = catLine ? catLine.replace(/^(?:Category|Topic|Subject)[:\s]*/i, '').trim() : 'General';
+    if (qLine && options.length >= 2) results.push({ question: qLine, options, answer: answerIdx, explanation, category, difficulty: "Medium" });
+  }
+  return results;
+}
+
+// ── DESIGN TOKENS ──────────────────────────────────────────────────────────────
+const S = {
+  app: { minHeight: "100vh", background: "#0a0e1a", fontFamily: "'DM Sans', sans-serif", color: "#e8eaf0" },
+  header: (settings) => ({ background: "linear-gradient(135deg, #0f1629 0%, #1a0f2e 100%)", borderBottom: `1px solid ${settings.accentColor}25`, padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(20px)" }),
+  logoMark: (settings) => ({ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${settings.accentColor}, ${settings.secondaryColor})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900 }),
+  navBtn: (active, settings) => ({ padding: "8px 13px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: active ? `${settings.accentColor}18` : "transparent", color: active ? settings.accentColor : "rgba(255,255,255,0.45)", borderBottom: active ? `2px solid ${settings.accentColor}` : "2px solid transparent", transition: "all 0.2s" }),
+  main: { maxWidth: 920, margin: "0 auto", padding: "32px 20px" },
+  card: { background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: 24, backdropFilter: "blur(10px)" },
+  badge: (color) => ({ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", background: `${color}20`, color, border: `1px solid ${color}40` }),
+  primaryBtn: (settings) => ({ padding: "11px 24px", borderRadius: 10, border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${settings.accentColor}, ${settings.secondaryColor})`, color: "#fff", fontSize: 13, fontWeight: 700, transition: "all 0.2s", boxShadow: `0 4px 18px ${settings.accentColor}30` }),
+  ghostBtn: { padding: "11px 24px", borderRadius: 10, cursor: "pointer", background: "transparent", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.12)", fontSize: 13, fontWeight: 600, transition: "all 0.2s" },
+  dangerBtn: { padding: "8px 16px", borderRadius: 8, cursor: "pointer", background: "rgba(231,76,108,0.1)", color: "#e74c6c", border: "1px solid rgba(231,76,108,0.3)", fontSize: 12, fontWeight: 600, transition: "all 0.2s" },
+  input: { width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", color: "#e8eaf0", fontSize: 14, outline: "none", boxSizing: "border-box" },
+  label: { fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, display: "block" },
+  textarea: { width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", color: "#e8eaf0", fontSize: 14, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6 },
+};
+
+// ── SHARED COMPONENTS ─────────────────────────────────────────────────────────
+const ProgressRing = ({ value, max, size = 80, stroke = 8, color = "#00d4b4" }) => {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (max > 0 ? value / max : 0) * circ;
+  return (
+    <svg width={size} height={size}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" transform={`rotate(-90 ${size/2} ${size/2})`} style={{ transition: "stroke-dashoffset 0.8s ease" }} />
+      <text x={size/2} y={size/2 + 5} textAnchor="middle" fill="#fff" fontSize="13" fontWeight="700">{max > 0 ? Math.round((value/max)*100) : 0}%</text>
+    </svg>
+  );
+};
+
+const Toast = ({ msg }) => msg ? (
+  <div style={{ position:"fixed", bottom:24, right:24, background:"#111c14", border:"1px solid #00d4b4", color:"#00d4b4", padding:"12px 20px", borderRadius:12, fontSize:13, fontWeight:700, zIndex:9999, boxShadow:"0 8px 32px rgba(0,0,0,0.5)", animation:"fadeIn 0.2s ease" }}>{msg}</div>
+) : null;
+
+const Header = ({ tab, setTab, settings }) => (
+  <header style={S.header(settings)}>
+    <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 0" }}>
+      <div style={S.logoMark(settings)}>✚</div>
+      <div>
+        <div style={{ fontSize:17, fontWeight:800, letterSpacing:"-0.5px" }}>{settings.siteName}</div>
+        <div style={{ fontSize:10, color:settings.accentColor, letterSpacing:"1.5px", textTransform:"uppercase" }}>{settings.siteSubtitle}</div>
+      </div>
+    </div>
+    <nav style={{ display:"flex", gap:2, alignItems:"center", flexWrap:"wrap" }}>
+      {["home","quiz","flashcards","notes","progress"].map(t => (
+        <button key={t} style={S.navBtn(tab===t, settings)} onClick={() => setTab(t)}>{t.charAt(0).toUpperCase()+t.slice(1)}</button>
+      ))}
+      <div style={{ width:1, height:20, background:"rgba(255,255,255,0.1)", margin:"0 5px" }} />
+      <button style={{ ...S.navBtn(tab==="admin", {...settings, accentColor:"#f39c12"}), fontSize:12 }} onClick={() => setTab("admin")}>⚙ Admin</button>
+    </nav>
+  </header>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN APP
+// ─────────────────────────────────────────────────────────────────────────────
+export default function NurseExamPrep() {
+  const [tab, setTab] = useState("home");
+  const [questions, setQuestions] = useStorage("nep_q", DEFAULT_QUESTIONS);
+  const [flashcards, setFlashcards] = useStorage("nep_fc", DEFAULT_FLASHCARDS);
+  const [notes, setNotes] = useStorage("nep_notes", DEFAULT_NOTES);
+  const [settings, setSettings] = useStorage("nep_settings", DEFAULT_SETTINGS);
+  const [progress, setProgress] = useStorage("nep_progress", {});
+  const saveProgress = (key, data) => setProgress(p => ({ ...p, [key]: data }));
+
+  // Quiz
+  const [quizState, setQuizState] = useState({ idx:0, selected:null, showExp:false, answers:[], done:false, startTime:null, timeLeft:null });
+  const quizQuestions = settings.shuffleQuestions ? [...questions].sort(()=>Math.random()-0.5) : questions;
+
+  useEffect(() => {
+    if (!settings.timerEnabled || !quizState.startTime || quizState.done) return;
+    const id = setInterval(() => {
+      const left = settings.timerMinutes * 60 - Math.floor((Date.now() - quizState.startTime) / 1000);
+      if (left <= 0) { setQuizState(s=>({...s,done:true})); clearInterval(id); }
+      else setQuizState(s=>({...s,timeLeft:left}));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [quizState.startTime, quizState.done, settings.timerEnabled, settings.timerMinutes]);
+
+  const handleAnswer = (oi) => {
+    if (quizState.selected !== null) return;
+    const q = quizQuestions[quizState.idx];
+    setQuizState(s=>({...s, selected:oi, showExp:true, answers:[...s.answers,{id:q.id,correct:oi===q.answer,category:q.category}]}));
+  };
+
+  const nextQuestion = () => {
+    if (quizState.idx+1 >= quizQuestions.length) {
+      const all = [...quizState.answers];
+      const score = all.filter(a=>a.correct).length;
+      saveProgress("quiz", { score, total:quizQuestions.length, date:new Date().toLocaleDateString(), answers:all });
+      setQuizState(s=>({...s,done:true}));
+    } else {
+      setQuizState(s=>({...s,idx:s.idx+1,selected:null,showExp:false}));
+    }
+  };
+
+  const resetQuiz = () => setQuizState({ idx:0, selected:null, showExp:false, answers:[], done:false, startTime:settings.timerEnabled?Date.now():null, timeLeft:settings.timerEnabled?settings.timerMinutes*60:null });
+
+  // Flashcards
+  const [fcIdx, setFcIdx] = useState(0);
+  const [fcFlipped, setFcFlipped] = useState(false);
+
+  // Notes
+  const [noteIdx, setNoteIdx] = useState(0);
+
+  if (tab === "admin") return <AdminPage tab={tab} setTab={setTab} questions={questions} setQuestions={setQuestions} flashcards={flashcards} setFlashcards={setFlashcards} notes={notes} setNotes={setNotes} settings={settings} setSettings={setSettings} />;
+
+  const DIFF_COLORS = { Easy:"#00d4b4", Medium:"#f39c12", Hard:"#e74c6c" };
+
+  return (
+    <div style={S.app}>
+      <FontLink />
+      <Header tab={tab} setTab={setTab} settings={settings} />
+
+      {settings.announcementEnabled && settings.announcementText && (
+        <div style={{ background:`${settings.accentColor}15`, borderBottom:`1px solid ${settings.accentColor}25`, padding:"10px 24px", textAlign:"center", fontSize:13, color:settings.accentColor, fontWeight:600 }}>
+          📢 {settings.announcementText}
+        </div>
+      )}
+
+      {/* ── HOME ── */}
+      {tab === "home" && (
+        <div style={S.main}>
+          <div style={{ textAlign:"center", padding:"40px 0 44px" }}>
+            <div style={{...S.badge(settings.accentColor), marginBottom:20}}>{settings.siteSubtitle} Exam Prep</div>
+            <h1 style={{ fontFamily:"'Syne',sans-serif", fontSize:46, fontWeight:900, margin:"0 0 14px", lineHeight:1.1, letterSpacing:"-1.5px" }}>
+              Ace Your <span style={{ background:`linear-gradient(135deg,${settings.accentColor},${settings.secondaryColor})`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>{settings.siteSubtitle}</span>
+            </h1>
+            <p style={{ fontSize:16, color:"rgba(255,255,255,0.45)", maxWidth:460, margin:"0 auto 28px", lineHeight:1.6 }}>Practice questions, flashcards, study notes, and progress tracking — all in one place.</p>
+            <button style={S.primaryBtn(settings)} onClick={() => { resetQuiz(); setTab("quiz"); }}>Start Practice Quiz →</button>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:14 }}>
+            {[
+              { icon:"📝", title:"Practice Quiz", desc:`${questions.length} exam-style questions with explanations`, t:"quiz", color:settings.accentColor },
+              { icon:"🃏", title:"Flashcards", desc:`${flashcards.length} essential clinical concepts`, t:"flashcards", color:settings.secondaryColor },
+              { icon:"📖", title:"Study Notes", desc:`${notes.length} comprehensive topic summaries`, t:"notes", color:"#f39c12" },
+              { icon:"📊", title:"My Progress", desc:progress.quiz?`Last score: ${progress.quiz.score}/${progress.quiz.total}`:"Track your improvement", t:"progress", color:"#e74c6c" },
+            ].map(({ icon, title, desc, t, color }) => (
+              <div key={t} style={{ ...S.card, cursor:"pointer", transition:"all 0.2s" }}
+                onClick={() => { if(t==="quiz") resetQuiz(); setTab(t); }}
+                onMouseEnter={e => { e.currentTarget.style.transform="translateY(-3px)"; e.currentTarget.style.borderColor=`${color}40`; }}
+                onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; }}>
+                <div style={{ fontSize:30, marginBottom:10 }}>{icon}</div>
+                <div style={{ fontSize:15, fontWeight:700, marginBottom:5 }}>{title}</div>
+                <div style={{ fontSize:13, color:"rgba(255,255,255,0.4)", lineHeight:1.5 }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ ...S.card, marginTop:14, display:"flex", justifyContent:"space-around", padding:"18px 24px" }}>
+            {[[questions.length,"Questions"],[flashcards.length,"Flashcards"],[notes.length,"Study Topics"],[`${settings.passMarkPercent}%`,"Pass Mark"]].map(([v,l]) => (
+              <div key={l} style={{ textAlign:"center" }}>
+                <div style={{ fontSize:24, fontWeight:800, background:`linear-gradient(135deg,${settings.accentColor},${settings.secondaryColor})`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>{v}</div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)", marginTop:2 }}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── QUIZ ── */}
+      {tab === "quiz" && (
+        <div style={S.main}>
+          {quizQuestions.length === 0 ? (
+            <div style={{ ...S.card, textAlign:"center", padding:48 }}>
+              <div style={{ fontSize:44, marginBottom:14 }}>📭</div>
+              <p style={{ color:"rgba(255,255,255,0.4)", marginBottom:20 }}>No questions yet. Add some in the Admin panel.</p>
+              <button style={S.primaryBtn(settings)} onClick={() => setTab("admin")}>Go to Admin →</button>
+            </div>
+          ) : quizState.done ? (
+            <QuizResults quizState={quizState} progress={progress} settings={settings} resetQuiz={resetQuiz} setTab={setTab} />
+          ) : (
+            <>
+              {/* Progress bar */}
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
+                <div style={{ flex:1, height:5, background:"rgba(255,255,255,0.07)", borderRadius:3 }}>
+                  <div style={{ height:"100%", width:`${(quizState.idx/quizQuestions.length)*100}%`, background:`linear-gradient(90deg,${settings.accentColor},${settings.secondaryColor})`, borderRadius:3, transition:"width 0.4s" }} />
+                </div>
+                <span style={{ fontSize:12, color:"rgba(255,255,255,0.35)", whiteSpace:"nowrap" }}>{quizState.idx+1}/{quizQuestions.length}</span>
+                {quizState.answers.length>0 && <span style={{ fontSize:12, color:settings.accentColor, whiteSpace:"nowrap" }}>{quizState.answers.filter(a=>a.correct).length}/{quizState.answers.length} ✓</span>}
+                {settings.timerEnabled && quizState.timeLeft!==null && <span style={{ fontSize:12, fontWeight:700, color:quizState.timeLeft<60?"#e74c6c":settings.accentColor, whiteSpace:"nowrap" }}>⏱ {Math.floor(quizState.timeLeft/60)}:{String(quizState.timeLeft%60).padStart(2,"0")}</span>}
+              </div>
+              {/* Question card */}
+              {(() => {
+                const q = quizQuestions[quizState.idx];
+                return (
+                  <div style={S.card}>
+                    <div style={{ display:"flex", gap:7, marginBottom:18, flexWrap:"wrap" }}>
+                      <span style={S.badge(settings.secondaryColor)}>{q.category}</span>
+                      {settings.showDifficulty && q.difficulty && <span style={S.badge(DIFF_COLORS[q.difficulty]||"#aaa")}>{q.difficulty}</span>}
+                      <span style={{ fontSize:11, color:"rgba(255,255,255,0.25)" }}>Q{quizState.idx+1}</span>
+                    </div>
+                    <p style={{ fontSize:16, lineHeight:1.65, marginBottom:22, fontWeight:500 }}>{q.question}</p>
+                    {q.options.map((opt, i) => {
+                      const state = quizState.selected===null?"idle": i===q.answer?"correct": i===quizState.selected?"wrong":"idle";
+                      return (
+                        <button key={i} onClick={() => handleAnswer(i)} style={{ width:"100%", padding:"13px 16px", marginBottom:9, borderRadius:11, border:`1px solid ${state==="correct"?settings.accentColor:state==="wrong"?"#e74c6c":"rgba(255,255,255,0.09)"}`, background:state==="correct"?`${settings.accentColor}14`:state==="wrong"?"rgba(231,76,108,0.10)":"rgba(255,255,255,0.02)", color:state==="correct"?settings.accentColor:state==="wrong"?"#e74c6c":"#e8eaf0", textAlign:"left", cursor:quizState.selected===null?"pointer":"default", fontSize:14, fontWeight:500, transition:"all 0.22s", display:"flex", alignItems:"center", gap:10 }}>
+                          <span style={{ width:24, height:24, borderRadius:"50%", border:`1.5px solid ${state==="correct"?settings.accentColor:state==="wrong"?"#e74c6c":"rgba(255,255,255,0.18)"}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:10, fontWeight:800 }}>
+                            {state==="correct"?"✓":state==="wrong"?"✗":String.fromCharCode(65+i)}
+                          </span>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                    {quizState.showExp && q.explanation && (
+                      <div style={{ marginTop:18, padding:16, background:`${settings.accentColor}08`, borderRadius:11, borderLeft:`3px solid ${settings.accentColor}` }}>
+                        <div style={{ fontSize:11, fontWeight:700, color:settings.accentColor, marginBottom:6, letterSpacing:"0.5px", textTransform:"uppercase" }}>Explanation</div>
+                        <p style={{ fontSize:14, lineHeight:1.65, color:"rgba(255,255,255,0.72)", margin:0 }}>{q.explanation}</p>
+                      </div>
+                    )}
+                    {quizState.showExp && (
+                      <div style={{ marginTop:18, display:"flex", justifyContent:"space-between" }}>
+                        <button style={S.ghostBtn} onClick={resetQuiz}>↩ Restart</button>
+                        <button style={S.primaryBtn(settings)} onClick={nextQuestion}>{quizState.idx+1>=quizQuestions.length?"Finish Quiz →":"Next →"}</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── FLASHCARDS ── */}
+      {tab === "flashcards" && (
+        <div style={S.main}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+            <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:24, fontWeight:800, margin:0 }}>Flashcards</h2>
+            <span style={{ fontSize:12, color:"rgba(255,255,255,0.35)" }}>{fcIdx+1} / {flashcards.length}</span>
+          </div>
+          {flashcards.length === 0 ? (
+            <div style={{ ...S.card, textAlign:"center", padding:48 }}><p style={{ color:"rgba(255,255,255,0.4)" }}>No flashcards yet. Add some in Admin.</p></div>
+          ) : (
+            <>
+              <div style={{ perspective:1000, cursor:"pointer" }} onClick={() => setFcFlipped(f=>!f)}>
+                <div style={{ minHeight:260, borderRadius:20, position:"relative", transformStyle:"preserve-3d", transition:"transform 0.55s", transform:fcFlipped?"rotateY(180deg)":"rotateY(0deg)" }}>
+                  <div style={{ ...S.card, minHeight:260, backfaceVisibility:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", background:`linear-gradient(135deg,${settings.secondaryColor}12,${settings.accentColor}06)`, border:`1px solid ${settings.secondaryColor}28` }}>
+                    <div style={{...S.badge(settings.secondaryColor), marginBottom:14}}>{flashcards[fcIdx]?.category}</div>
+                    <div style={{ fontSize:11, color:"rgba(255,255,255,0.25)", marginBottom:14, letterSpacing:"1px", textTransform:"uppercase" }}>Click to reveal</div>
+                    <h3 style={{ fontFamily:"'Syne',sans-serif", fontSize:22, fontWeight:800, textAlign:"center", margin:0 }}>{flashcards[fcIdx]?.front}</h3>
+                  </div>
+                  <div style={{ ...S.card, minHeight:260, position:"absolute", inset:0, backfaceVisibility:"hidden", transform:"rotateY(180deg)", display:"flex", alignItems:"center", justifyContent:"center", background:`linear-gradient(135deg,${settings.accentColor}10,${settings.secondaryColor}05)`, border:`1px solid ${settings.accentColor}28` }}>
+                    <pre style={{ whiteSpace:"pre-wrap", fontFamily:"'DM Sans',sans-serif", fontSize:14, lineHeight:1.75, color:"#e8eaf0", margin:0, textAlign:"center" }}>{flashcards[fcIdx]?.back}</pre>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:12, justifyContent:"center", marginTop:20 }}>
+                <button style={S.ghostBtn} onClick={() => { setFcIdx(i=>(i-1+flashcards.length)%flashcards.length); setFcFlipped(false); }}>← Prev</button>
+                <button style={S.primaryBtn(settings)} onClick={() => { setFcIdx(i=>(i+1)%flashcards.length); setFcFlipped(false); }}>Next →</button>
+              </div>
+              <div style={{ display:"flex", gap:5, justifyContent:"center", marginTop:16, flexWrap:"wrap" }}>
+                {flashcards.map((_,i) => <div key={i} onClick={() => { setFcIdx(i); setFcFlipped(false); }} style={{ width:i===fcIdx?18:7, height:7, borderRadius:4, background:i===fcIdx?settings.accentColor:"rgba(255,255,255,0.1)", cursor:"pointer", transition:"all 0.25s" }} />)}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── NOTES ── */}
+      {tab === "notes" && (
+        <div style={S.main}>
+          <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:24, fontWeight:800, marginBottom:18 }}>Study Notes</h2>
+          {notes.length === 0 ? (
+            <div style={{ ...S.card, textAlign:"center", padding:48 }}><p style={{ color:"rgba(255,255,255,0.4)" }}>No study notes yet. Add some in Admin.</p></div>
+          ) : (
+            <div style={{ display:"grid", gridTemplateColumns:"190px 1fr", gap:14 }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                {notes.map((n,i) => (
+                  <button key={n.id} onClick={() => setNoteIdx(i)} style={{ padding:"11px 13px", borderRadius:11, border:`1px solid ${i===noteIdx?`${n.color}40`:"rgba(255,255,255,0.06)"}`, background:i===noteIdx?`${n.color}12`:"rgba(255,255,255,0.02)", color:i===noteIdx?n.color:"rgba(255,255,255,0.45)", textAlign:"left", cursor:"pointer", fontSize:12, fontWeight:600, display:"flex", alignItems:"center", gap:7, transition:"all 0.2s" }}>
+                    <span>{n.icon}</span> {n.title}
+                  </button>
+                ))}
+              </div>
+              {notes[noteIdx] && (
+                <div style={{ ...S.card, border:`1px solid ${notes[noteIdx].color}22` }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:18 }}>
+                    <span style={{ fontSize:26 }}>{notes[noteIdx].icon}</span>
+                    <h3 style={{ fontFamily:"'Syne',sans-serif", fontSize:19, fontWeight:800, margin:0, color:notes[noteIdx].color }}>{notes[noteIdx].title}</h3>
+                  </div>
+                  <div style={{ fontSize:14, lineHeight:1.8, color:"rgba(255,255,255,0.7)" }}>
+                    {notes[noteIdx].content.split('\n').map((line,i) => {
+                      if (line.startsWith('**') && line.endsWith('**')) return <div key={i} style={{ fontWeight:700, color:"#e8eaf0", marginTop:i>0?16:0, marginBottom:5, fontSize:14 }}>{line.slice(2,-2)}</div>;
+                      if (line.startsWith('• ')) return <div key={i} style={{ paddingLeft:16, position:"relative" }}><span style={{ position:"absolute", left:0, color:notes[noteIdx].color }}>•</span>{line.slice(2)}</div>;
+                      return <div key={i}>{line}</div>;
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── PROGRESS ── */}
+      {tab === "progress" && (
+        <div style={S.main}>
+          <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:24, fontWeight:800, marginBottom:20 }}>My Progress</h2>
+          {!progress.quiz ? (
+            <div style={{ ...S.card, textAlign:"center", padding:48 }}>
+              <div style={{ fontSize:44, marginBottom:14 }}>📊</div>
+              <p style={{ color:"rgba(255,255,255,0.4)", marginBottom:22 }}>No quiz attempts yet.</p>
+              <button style={S.primaryBtn(settings)} onClick={() => { resetQuiz(); setTab("quiz"); }}>Start Quiz →</button>
+            </div>
+          ) : (
+            <QuizResults quizState={null} progress={progress} settings={settings} resetQuiz={resetQuiz} setTab={setTab} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── QUIZ RESULTS ──────────────────────────────────────────────────────────────
+function QuizResults({ progress, settings, resetQuiz, setTab }) {
+  const qp = progress.quiz;
+  if (!qp) return null;
+  const pct = Math.round((qp.score/qp.total)*100);
+  const passed = pct >= settings.passMarkPercent;
+  const color = passed ? settings.accentColor : pct >= settings.passMarkPercent*0.7 ? "#f39c12" : "#e74c6c";
+  const catMap = {};
+  (qp.answers||[]).forEach(a => {
+    if (!catMap[a.category]) catMap[a.category] = { correct:0, total:0 };
+    catMap[a.category].total++;
+    if (a.correct) catMap[a.category].correct++;
+  });
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      <div style={{ ...S.card, textAlign:"center", padding:36 }}>
+        <div style={{ fontSize:44, marginBottom:12 }}>{passed?"🎉":"📚"}</div>
+        <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:28, margin:"0 0 8px" }}>Quiz Complete!</h2>
+        <p style={{ color:"rgba(255,255,255,0.4)", marginBottom:22 }}>{passed?"Great work! You passed!": `You need ${settings.passMarkPercent}% to pass. Keep studying!`}</p>
+        <div style={{ display:"flex", justifyContent:"center", marginBottom:20 }}>
+          <ProgressRing value={qp.score} max={qp.total} size={110} stroke={11} color={color} />
+        </div>
+        <div style={{ fontSize:20, fontWeight:800 }}>{qp.score} / {qp.total} correct</div>
+        <div style={{ marginTop:10 }}><span style={S.badge(color)}>{passed?"Passed ✓":"Not Yet Passed"}</span></div>
+        <div style={{ fontSize:12, color:"rgba(255,255,255,0.3)", marginTop:8 }}>Last attempt: {qp.date}</div>
+        <div style={{ display:"flex", gap:10, justifyContent:"center", marginTop:22 }}>
+          <button style={S.primaryBtn(settings)} onClick={() => { resetQuiz(); setTab("quiz"); }}>Retry Quiz</button>
+          <button style={S.ghostBtn} onClick={() => setTab("flashcards")}>Review Flashcards</button>
+        </div>
+      </div>
+      {Object.keys(catMap).length > 0 && (
+        <div style={S.card}>
+          <div style={{ fontSize:12, fontWeight:700, marginBottom:14, color:"rgba(255,255,255,0.4)", textTransform:"uppercase", letterSpacing:"0.5px" }}>Category Breakdown</div>
+          {Object.entries(catMap).map(([cat, { correct, total:t }]) => {
+            const p = Math.round((correct/t)*100);
+            return (
+              <div key={cat} style={{ marginBottom:12 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                  <span style={{ fontSize:13 }}>{cat}</span>
+                  <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)" }}>{correct}/{t} ({p}%)</span>
+                </div>
+                <div style={{ height:5, background:"rgba(255,255,255,0.07)", borderRadius:3 }}>
+                  <div style={{ height:"100%", width:`${p}%`, background:p>=settings.passMarkPercent?settings.accentColor:"#f39c12", borderRadius:3, transition:"width 0.6s" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN PAGE
+// ─────────────────────────────────────────────────────────────────────────────
+function AdminPage({ setTab, questions, setQuestions, flashcards, setFlashcards, notes, setNotes, settings, setSettings }) {
+  const [adminTab, setAdminTab] = useState("questions");
+  const [pass, setPass] = useState("");
+  const [authed, setAuthed] = useState(() => { try { return localStorage.getItem("nep_admin") === "y"; } catch { return false; } });
+  const [authErr, setAuthErr] = useState(false);
+
+  const login = () => {
+    if (pass === (settings.adminPassword || "admin123")) {
+      setAuthed(true);
+      try { localStorage.setItem("nep_admin","y"); } catch {}
+    } else { setAuthErr(true); setTimeout(()=>setAuthErr(false),2000); }
+  };
+
+  const logout = () => { setAuthed(false); try { localStorage.removeItem("nep_admin"); } catch {}; setTab("home"); };
+
+  if (!authed) return (
+    <div style={S.app}>
+      <FontLink />
+      <header style={{ ...S.header(settings), background:"linear-gradient(135deg,#130a20,#0d1a13)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 0" }}>
+          <div style={{ ...S.logoMark(settings), background:"linear-gradient(135deg,#f39c12,#e74c6c)" }}>⚙</div>
+          <div>
+            <div style={{ fontSize:16, fontWeight:800 }}>Admin Login</div>
+            <div style={{ fontSize:10, color:"#f39c12", letterSpacing:"1.5px", textTransform:"uppercase" }}>{settings.siteName}</div>
+          </div>
+        </div>
+        <button style={S.ghostBtn} onClick={() => setTab("home")}>← Back to Site</button>
+      </header>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"80vh" }}>
+        <div style={{ ...S.card, maxWidth:380, width:"100%", textAlign:"center", padding:40, margin:"0 20px" }}>
+          <div style={{ fontSize:44, marginBottom:16 }}>🔐</div>
+          <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:24, fontWeight:800, marginBottom:6 }}>Admin Access</h2>
+          <p style={{ color:"rgba(255,255,255,0.35)", fontSize:13, marginBottom:28 }}>Enter your admin password to continue</p>
+          <input type="password" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} placeholder="Password" style={{ ...S.input, textAlign:"center", marginBottom:14, borderColor:authErr?"#e74c6c":"rgba(255,255,255,0.12)" }} />
+          {authErr && <p style={{ color:"#e74c6c", fontSize:12, marginBottom:10 }}>Incorrect password. Try again.</p>}
+          <button style={{ ...S.primaryBtn(settings), width:"100%" }} onClick={login}>Login →</button>
+          <p style={{ color:"rgba(255,255,255,0.18)", fontSize:11, marginTop:20 }}>Default: admin123 (change in Settings)</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const TABS = [
+    { id:"questions", label:"📝 Questions", count:questions.length },
+    { id:"flashcards", label:"🃏 Flashcards", count:flashcards.length },
+    { id:"notes", label:"📖 Notes", count:notes.length },
+    { id:"settings", label:"⚙ Settings" },
+  ];
+
+  return (
+    <div style={S.app}>
+      <FontLink />
+      <header style={{ ...S.header(settings), background:"linear-gradient(135deg,#130a20,#0d1820)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12, padding:"14px 0" }}>
+          <div style={{ ...S.logoMark(settings), background:"linear-gradient(135deg,#f39c12,#e74c6c)" }}>⚙</div>
+          <div>
+            <div style={{ fontSize:16, fontWeight:800 }}>Admin Panel</div>
+            <div style={{ fontSize:10, color:"#f39c12", letterSpacing:"1.5px", textTransform:"uppercase" }}>{settings.siteName}</div>
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          <button style={{ ...S.ghostBtn, fontSize:12 }} onClick={() => setTab("home")}>← View Site</button>
+          <button style={S.dangerBtn} onClick={logout}>Logout</button>
+        </div>
+      </header>
+
+      <div style={{ ...S.main, maxWidth:1000 }}>
+        {/* Stats */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:24 }}>
+          {[["Questions", questions.length, settings.accentColor],["Flashcards", flashcards.length, settings.secondaryColor],["Study Notes", notes.length,"#f39c12"],["Pass Mark", settings.passMarkPercent+"%","#e74c6c"]].map(([l,v,c]) => (
+            <div key={l} style={{ ...S.card, textAlign:"center", padding:"14px 12px", border:`1px solid ${c}20` }}>
+              <div style={{ fontSize:22, fontWeight:800, color:c }}>{v}</div>
+              <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", textTransform:"uppercase", letterSpacing:"0.5px", marginTop:2 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tab nav */}
+        <div style={{ display:"flex", gap:4, marginBottom:20, borderBottom:"1px solid rgba(255,255,255,0.07)", paddingBottom:0 }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setAdminTab(t.id)} style={{ padding:"9px 18px", borderRadius:"10px 10px 0 0", border:"none", cursor:"pointer", fontSize:13, fontWeight:600, background:adminTab===t.id?"rgba(255,255,255,0.06)":"transparent", color:adminTab===t.id?"#f39c12":"rgba(255,255,255,0.4)", borderBottom:adminTab===t.id?"2px solid #f39c12":"2px solid transparent", transition:"all 0.2s" }}>
+              {t.label}{t.count!==undefined?` (${t.count})`:""}
+            </button>
+          ))}
+        </div>
+
+        {adminTab==="questions" && <AdminQuestions questions={questions} setQuestions={setQuestions} settings={settings} />}
+        {adminTab==="flashcards" && <AdminFlashcards flashcards={flashcards} setFlashcards={setFlashcards} settings={settings} />}
+        {adminTab==="notes" && <AdminNotes notes={notes} setNotes={setNotes} settings={settings} />}
+        {adminTab==="settings" && <AdminSettings settings={settings} setSettings={setSettings} questions={questions} setQuestions={setQuestions} flashcards={flashcards} setFlashcards={setFlashcards} notes={notes} setNotes={setNotes} />}
+      </div>
+    </div>
+  );
+}
+
+// ── ADMIN QUESTIONS ───────────────────────────────────────────────────────────
+function AdminQuestions({ questions, setQuestions, settings }) {
+  const [view, setView] = useState("list");
+  const [editQ, setEditQ] = useState(null);
+  const [pasteText, setPasteText] = useState("");
+  const [parsed, setParsed] = useState([]);
+  const [parseMsg, setParseMsg] = useState("");
+  const [search, setSearch] = useState("");
+  const [filterCat, setFilterCat] = useState("All");
+  const [toast, setToast] = useState("");
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(""),2500); };
+
+  const EMPTY = { question:"", category:"General", difficulty:"Medium", options:["","","",""], answer:0, explanation:"" };
+  const [form, setForm] = useState(EMPTY);
+
+  const cats = ["All", ...Array.from(new Set(questions.map(q=>q.category)))];
+  const filtered = questions.filter(q => (filterCat==="All"||q.category===filterCat) && (!search||q.question.toLowerCase().includes(search.toLowerCase())));
+
+  const del = id => { if(!confirm("Delete this question?")) return; setQuestions(qs=>qs.filter(q=>q.id!==id)); showToast("Question deleted"); };
+
+  const save = () => {
+    const opts = form.options.filter(o=>o.trim());
+    if(!form.question.trim()||opts.length<2) { alert("Fill in question and at least 2 options."); return; }
+    if(editQ) { setQuestions(qs=>qs.map(q=>q.id===editQ.id?{...form,id:editQ.id}:q)); showToast("Updated ✓"); }
+    else { setQuestions(qs=>[...qs,{...form,id:Date.now()}]); showToast("Added ✓"); }
+    setForm(EMPTY); setEditQ(null); setView("list");
+  };
+
+  const doParse = () => { const r=parsePastedQuestions(pasteText); setParsed(r); setParseMsg(r.length?`✓ Found ${r.length} question(s)`:"⚠ No questions detected. Check format."); };
+  const doImport = () => { setQuestions(qs=>[...qs,...parsed.map((q,i)=>({...q,id:Date.now()+i}))]); setPasteText(""); setParsed([]); setParseMsg(""); setView("list"); showToast(`${parsed.length} question(s) imported ✓`); };
+
+  const DIFF = { Easy:"#00d4b4", Medium:"#f39c12", Hard:"#e74c6c" };
+  const SubNav = () => (
+    <div style={{ display:"flex", gap:7, marginBottom:18, flexWrap:"wrap", alignItems:"center", justifyContent:"space-between" }}>
+      <div style={{ display:"flex", gap:7 }}>
+        {[["list","📋 All"],["add","➕ Add Manual"],["paste","📋 Paste & Parse"]].map(([v,l]) => (
+          <button key={v} onClick={()=>{ setView(v); setForm(EMPTY); setEditQ(null); }} style={{ padding:"7px 14px", borderRadius:9, border:`1px solid ${view===v?"#f39c12":"rgba(255,255,255,0.1)"}`, background:view===v?"rgba(243,156,18,0.12)":"transparent", color:view===v?"#f39c12":"rgba(255,255,255,0.4)", cursor:"pointer", fontSize:12, fontWeight:600 }}>{l}</button>
+        ))}
+      </div>
+      {view==="list" && (
+        <div style={{ display:"flex", gap:8 }}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search..." style={{ ...S.input, width:160, fontSize:12, padding:"7px 12px" }} />
+          <select value={filterCat} onChange={e=>setFilterCat(e.target.value)} style={{ ...S.input, width:140, fontSize:12, padding:"7px 12px" }}>
+            {cats.map(c=><option key={c}>{c}</option>)}
+          </select>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div>
+      <Toast msg={toast} />
+      <SubNav />
+
+      {view==="list" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
+          {filtered.length===0 && <div style={{ ...S.card, textAlign:"center", padding:40, color:"rgba(255,255,255,0.3)" }}>No questions found.</div>}
+          {filtered.map((q,i) => (
+            <div key={q.id} style={{ ...S.card, padding:"14px 18px", display:"flex", gap:12, alignItems:"flex-start" }}>
+              <div style={{ minWidth:26, height:26, borderRadius:"50%", background:"rgba(255,255,255,0.05)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.25)", flexShrink:0 }}>{i+1}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:"flex", gap:6, marginBottom:6, flexWrap:"wrap" }}>
+                  <span style={S.badge(settings.secondaryColor)}>{q.category}</span>
+                  {q.difficulty && <span style={S.badge(DIFF[q.difficulty]||"#aaa")}>{q.difficulty}</span>}
+                </div>
+                <p style={{ margin:"0 0 6px", fontSize:13, lineHeight:1.5 }}>{q.question}</p>
+                <div style={{ fontSize:12, color:"rgba(255,255,255,0.3)" }}>✓ <span style={{ color:settings.accentColor, fontWeight:600 }}>{String.fromCharCode(65+q.answer)}. {q.options[q.answer]}</span></div>
+              </div>
+              <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                <button onClick={()=>{ setEditQ(q); setForm({...q}); setView("add"); }} style={{ padding:"6px 12px", borderRadius:8, border:"1px solid rgba(108,99,255,0.35)", background:"rgba(108,99,255,0.1)", color:"#6c63ff", cursor:"pointer", fontSize:11, fontWeight:600 }}>Edit</button>
+                <button onClick={()=>del(q.id)} style={S.dangerBtn}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(view==="add") && (
+        <div style={S.card}>
+          <h3 style={{ fontFamily:"'Syne',sans-serif", fontSize:18, fontWeight:800, marginBottom:18 }}>{editQ?"Edit Question":"Add New Question"}</h3>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+            <div><label style={S.label}>Category</label><input value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} style={S.input} /></div>
+            <div><label style={S.label}>Difficulty</label>
+              <select value={form.difficulty} onChange={e=>setForm(f=>({...f,difficulty:e.target.value}))} style={S.input}>
+                <option>Easy</option><option>Medium</option><option>Hard</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ marginBottom:14 }}><label style={S.label}>Question *</label><textarea value={form.question} onChange={e=>setForm(f=>({...f,question:e.target.value}))} style={{ ...S.textarea, minHeight:80 }} placeholder="Enter question..." /></div>
+          <div style={{ marginBottom:14 }}>
+            <label style={S.label}>Options * — select the correct answer</label>
+            {form.options.map((opt,i) => (
+              <div key={i} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"center" }}>
+                <input type="radio" name="ans" checked={form.answer===i} onChange={()=>setForm(f=>({...f,answer:i}))} style={{ accentColor:settings.accentColor, width:16, height:16, flexShrink:0 }} />
+                <span style={{ width:18, fontSize:12, fontWeight:700, color:"rgba(255,255,255,0.35)" }}>{String.fromCharCode(65+i)}.</span>
+                <input value={opt} onChange={e=>{ const o=[...form.options]; o[i]=e.target.value; setForm(f=>({...f,options:o})); }} placeholder={`Option ${String.fromCharCode(65+i)}`} style={{ ...S.input, flex:1 }} />
+              </div>
+            ))}
+          </div>
+          <div style={{ marginBottom:20 }}><label style={S.label}>Explanation (optional)</label><textarea value={form.explanation} onChange={e=>setForm(f=>({...f,explanation:e.target.value}))} style={{ ...S.textarea, minHeight:70 }} placeholder="Why is this answer correct?" /></div>
+          <div style={{ display:"flex", gap:10 }}>
+            <button style={S.primaryBtn(settings)} onClick={save}>{editQ?"Save Changes":"Add Question"}</button>
+            <button style={S.ghostBtn} onClick={()=>{ setView("list"); setEditQ(null); setForm(EMPTY); }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {view==="paste" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <div style={S.card}>
+            <h3 style={{ fontFamily:"'Syne',sans-serif", fontSize:18, fontWeight:800, marginBottom:6 }}>Paste & Auto-Parse Questions</h3>
+            <p style={{ fontSize:13, color:"rgba(255,255,255,0.4)", marginBottom:14 }}>Paste questions in any structured numbered format. The parser recognises A) B) C) D) options and Answer:/Category:/Explanation: fields.</p>
+            <div style={{ ...S.card, background:"rgba(0,0,0,0.3)", padding:"12px 16px", marginBottom:14, fontSize:12, color:"rgba(255,255,255,0.35)", fontFamily:"monospace", lineHeight:1.8, border:"1px dashed rgba(255,255,255,0.08)", borderRadius:12 }}>
+              <strong style={{ color:"rgba(255,255,255,0.5)" }}>Accepted format example:</strong><br/>
+              1. What is the normal adult heart rate?<br/>
+              A) 40-60 bpm<br/>
+              B) 60-100 bpm<br/>
+              C) 100-120 bpm<br/>
+              D) 120-160 bpm<br/>
+              Answer: B<br/>
+              Category: Fundamentals<br/>
+              Explanation: The normal resting heart rate for adults is 60-100 bpm.
+            </div>
+            <textarea value={pasteText} onChange={e=>setPasteText(e.target.value)} placeholder="Paste your questions here..." style={{ ...S.textarea, minHeight:200, marginBottom:14 }} />
+            <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+              <button style={S.primaryBtn(settings)} onClick={doParse}>🔍 Parse Questions</button>
+              {parseMsg && <span style={{ fontSize:13, color:parsed.length>0?settings.accentColor:"#f39c12" }}>{parseMsg}</span>}
+            </div>
+          </div>
+          {parsed.length>0 && (
+            <div style={S.card}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                <h3 style={{ fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800, margin:0 }}>Preview ({parsed.length} questions found)</h3>
+                <button style={S.primaryBtn(settings)} onClick={doImport}>Import All →</button>
+              </div>
+              {parsed.map((q,i) => (
+                <div key={i} style={{ padding:"12px 14px", marginBottom:8, borderRadius:11, background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.07)" }}>
+                  <div style={{ display:"flex", gap:6, marginBottom:6 }}><span style={S.badge(settings.secondaryColor)}>{q.category}</span><span style={{ fontSize:11, color:"rgba(255,255,255,0.25)" }}>Q{i+1}</span></div>
+                  <p style={{ fontSize:13, margin:"0 0 6px" }}>{q.question}</p>
+                  <div style={{ fontSize:12, color:settings.accentColor }}>✓ Correct: {String.fromCharCode(65+q.answer)}. {q.options[q.answer]}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ADMIN FLASHCARDS ──────────────────────────────────────────────────────────
+function AdminFlashcards({ flashcards, setFlashcards, settings }) {
+  const [view, setView] = useState("list");
+  const [editFC, setEditFC] = useState(null);
+  const [form, setForm] = useState({ front:"", back:"", category:"General" });
+  const [toast, setToast] = useState("");
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(""),2500); };
+  const del = id => { if(!confirm("Delete flashcard?")) return; setFlashcards(fs=>fs.filter(f=>f.id!==id)); showToast("Deleted"); };
+  const save = () => {
+    if(!form.front.trim()||!form.back.trim()) { alert("Fill in both sides."); return; }
+    if(editFC) { setFlashcards(fs=>fs.map(f=>f.id===editFC.id?{...form,id:editFC.id}:f)); showToast("Updated ✓"); }
+    else { setFlashcards(fs=>[...fs,{...form,id:Date.now()}]); showToast("Added ✓"); }
+    setForm({front:"",back:"",category:"General"}); setEditFC(null); setView("list");
+  };
+  return (
+    <div>
+      <Toast msg={toast} />
+      <div style={{ display:"flex", gap:7, marginBottom:18 }}>
+        {[["list","📋 All"],["add","➕ Add New"]].map(([v,l]) => (
+          <button key={v} onClick={()=>{ setView(v); setForm({front:"",back:"",category:"General"}); setEditFC(null); }} style={{ padding:"7px 14px", borderRadius:9, border:`1px solid ${view===v?"#f39c12":"rgba(255,255,255,0.1)"}`, background:view===v?"rgba(243,156,18,0.12)":"transparent", color:view===v?"#f39c12":"rgba(255,255,255,0.4)", cursor:"pointer", fontSize:12, fontWeight:600 }}>{l}</button>
+        ))}
+      </div>
+      {view==="list" && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:10 }}>
+          {flashcards.length===0 && <div style={{ ...S.card, gridColumn:"1/-1", textAlign:"center", padding:40, color:"rgba(255,255,255,0.3)" }}>No flashcards yet.</div>}
+          {flashcards.map(fc => (
+            <div key={fc.id} style={{ ...S.card, padding:"14px 16px" }}>
+              <div style={{ ...S.badge(settings.secondaryColor), marginBottom:8 }}>{fc.category}</div>
+              <div style={{ fontSize:14, fontWeight:700, marginBottom:5 }}>{fc.front}</div>
+              <div style={{ fontSize:12, color:"rgba(255,255,255,0.3)", lineHeight:1.5, marginBottom:10 }}>{fc.back.slice(0,80)}{fc.back.length>80?"…":""}</div>
+              <div style={{ display:"flex", gap:6 }}>
+                <button onClick={()=>{ setEditFC(fc); setForm({...fc}); setView("add"); }} style={{ padding:"5px 12px", borderRadius:8, border:"1px solid rgba(108,99,255,0.35)", background:"rgba(108,99,255,0.1)", color:"#6c63ff", cursor:"pointer", fontSize:11, fontWeight:600 }}>Edit</button>
+                <button onClick={()=>del(fc.id)} style={S.dangerBtn}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {view==="add" && (
+        <div style={S.card}>
+          <h3 style={{ fontFamily:"'Syne',sans-serif", fontSize:18, fontWeight:800, marginBottom:18 }}>{editFC?"Edit Flashcard":"Add Flashcard"}</h3>
+          <div style={{ marginBottom:12 }}><label style={S.label}>Category</label><input value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} style={S.input} /></div>
+          <div style={{ marginBottom:12 }}><label style={S.label}>Front (Term / Question) *</label><input value={form.front} onChange={e=>setForm(f=>({...f,front:e.target.value}))} placeholder="e.g. Normal Adult Heart Rate" style={S.input} /></div>
+          <div style={{ marginBottom:20 }}><label style={S.label}>Back (Answer / Definition) *</label><textarea value={form.back} onChange={e=>setForm(f=>({...f,back:e.target.value}))} placeholder="e.g. 60–100 bpm..." style={{ ...S.textarea, minHeight:100 }} /></div>
+          <div style={{ display:"flex", gap:10 }}>
+            <button style={S.primaryBtn(settings)} onClick={save}>{editFC?"Save Changes":"Add Flashcard"}</button>
+            <button style={S.ghostBtn} onClick={()=>{ setView("list"); setEditFC(null); }}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ADMIN NOTES ───────────────────────────────────────────────────────────────
+function AdminNotes({ notes, setNotes, settings }) {
+  const [view, setView] = useState("list");
+  const [editN, setEditN] = useState(null);
+  const ICONS = ["♥","⚗","💊","⭐","🧠","💉","🩺","🔬","📋","🫀","🫁","🦴","🌡","💧","⚕"];
+  const COLORS = ["#e74c6c","#3498db","#9b59b6","#f39c12","#00d4b4","#6c63ff","#2ecc71","#e67e22","#1abc9c","#c0392b"];
+  const [form, setForm] = useState({ title:"", icon:"📋", color:"#00d4b4", content:"" });
+  const [toast, setToast] = useState("");
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(""),2500); };
+  const del = id => { if(!confirm("Delete note?")) return; setNotes(ns=>ns.filter(n=>n.id!==id)); showToast("Deleted"); };
+  const save = () => {
+    if(!form.title.trim()||!form.content.trim()) { alert("Fill in title and content."); return; }
+    if(editN) { setNotes(ns=>ns.map(n=>n.id===editN.id?{...form,id:editN.id}:n)); showToast("Updated ✓"); }
+    else { setNotes(ns=>[...ns,{...form,id:Date.now()}]); showToast("Added ✓"); }
+    setForm({title:"",icon:"📋",color:"#00d4b4",content:""}); setEditN(null); setView("list");
+  };
+  return (
+    <div>
+      <Toast msg={toast} />
+      <div style={{ display:"flex", gap:7, marginBottom:18 }}>
+        {[["list","📋 All"],["add","➕ Add New"]].map(([v,l]) => (
+          <button key={v} onClick={()=>{ setView(v); setForm({title:"",icon:"📋",color:"#00d4b4",content:""}); setEditN(null); }} style={{ padding:"7px 14px", borderRadius:9, border:`1px solid ${view===v?"#f39c12":"rgba(255,255,255,0.1)"}`, background:view===v?"rgba(243,156,18,0.12)":"transparent", color:view===v?"#f39c12":"rgba(255,255,255,0.4)", cursor:"pointer", fontSize:12, fontWeight:600 }}>{l}</button>
+        ))}
+      </div>
+      {view==="list" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
+          {notes.length===0 && <div style={{ ...S.card, textAlign:"center", padding:40, color:"rgba(255,255,255,0.3)" }}>No notes yet.</div>}
+          {notes.map(n => (
+            <div key={n.id} style={{ ...S.card, padding:"14px 18px", display:"flex", gap:12, alignItems:"center", border:`1px solid ${n.color}20` }}>
+              <span style={{ fontSize:26 }}>{n.icon}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:14, fontWeight:700, color:n.color, marginBottom:3 }}>{n.title}</div>
+                <div style={{ fontSize:12, color:"rgba(255,255,255,0.3)" }}>{n.content.slice(0,100).replace(/\*\*/g,"")}...</div>
+              </div>
+              <div style={{ display:"flex", gap:6 }}>
+                <button onClick={()=>{ setEditN(n); setForm({...n}); setView("add"); }} style={{ padding:"5px 12px", borderRadius:8, border:"1px solid rgba(108,99,255,0.35)", background:"rgba(108,99,255,0.1)", color:"#6c63ff", cursor:"pointer", fontSize:11, fontWeight:600 }}>Edit</button>
+                <button onClick={()=>del(n.id)} style={S.dangerBtn}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {view==="add" && (
+        <div style={S.card}>
+          <h3 style={{ fontFamily:"'Syne',sans-serif", fontSize:18, fontWeight:800, marginBottom:18 }}>{editN?"Edit Note":"Add Study Note"}</h3>
+          <div style={{ marginBottom:14 }}><label style={S.label}>Title *</label><input value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} placeholder="e.g. Cardiac Emergencies" style={S.input} /></div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+            <div>
+              <label style={S.label}>Icon</label>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:4 }}>
+                {ICONS.map(ic => <button key={ic} onClick={()=>setForm(f=>({...f,icon:ic}))} style={{ width:34, height:34, borderRadius:8, border:`2px solid ${form.icon===ic?"#f39c12":"rgba(255,255,255,0.1)"}`, background:form.icon===ic?"rgba(243,156,18,0.15)":"rgba(255,255,255,0.03)", cursor:"pointer", fontSize:16 }}>{ic}</button>)}
+              </div>
+            </div>
+            <div>
+              <label style={S.label}>Color</label>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:7, marginTop:4 }}>
+                {COLORS.map(c => <div key={c} onClick={()=>setForm(f=>({...f,color:c}))} style={{ width:30, height:30, borderRadius:"50%", background:c, cursor:"pointer", border:`3px solid ${form.color===c?"#fff":"transparent"}`, transition:"border 0.15s" }} />)}
+              </div>
+            </div>
+          </div>
+          <div style={{ marginBottom:20 }}>
+            <label style={S.label}>Content * — use **text** for bold headings, • for bullets</label>
+            <textarea value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))} placeholder={"**Section Heading**\n• Bullet point one\n• Bullet point two\n\nParagraph text..."} style={{ ...S.textarea, minHeight:200 }} />
+          </div>
+          <div style={{ display:"flex", gap:10 }}>
+            <button style={S.primaryBtn(settings)} onClick={save}>{editN?"Save Changes":"Add Note"}</button>
+            <button style={S.ghostBtn} onClick={()=>{ setView("list"); setEditN(null); }}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ADMIN SETTINGS ────────────────────────────────────────────────────────────
+function AdminSettings({ settings, setSettings, questions, setQuestions, flashcards, setFlashcards, notes, setNotes }) {
+  const [form, setForm] = useState({...settings});
+  const [toast, setToast] = useState("");
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(""),2500); };
+
+  const save = () => { setSettings(form); showToast("Settings saved ✓"); };
+
+  const resetAll = () => {
+    if(!confirm("⚠ Reset ALL data to defaults? This cannot be undone.")) return;
+    setQuestions(DEFAULT_QUESTIONS); setFlashcards(DEFAULT_FLASHCARDS); setNotes(DEFAULT_NOTES);
+    setSettings(DEFAULT_SETTINGS); setForm(DEFAULT_SETTINGS);
+    try { localStorage.removeItem("nep_progress"); } catch {}
+    showToast("All data reset to defaults");
+  };
+
+  const exportData = () => {
+    const blob = new Blob([JSON.stringify({questions,flashcards,notes,settings,exportDate:new Date().toISOString()},null,2)],{type:"application/json"});
+    const a = document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="nurseexamprep-backup.json"; a.click();
+    showToast("Exported ✓");
+  };
+
+  const importData = e => {
+    const file = e.target.files[0]; if(!file) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if(d.questions) setQuestions(d.questions); if(d.flashcards) setFlashcards(d.flashcards);
+        if(d.notes) setNotes(d.notes); if(d.settings) { setSettings(d.settings); setForm(d.settings); }
+        showToast("Imported ✓");
+      } catch { alert("Invalid backup file."); }
+    };
+    r.readAsText(file);
+  };
+
+  const Sec = ({ title, children }) => <div style={{ ...S.card, marginBottom:14 }}><div style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,0.4)", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:18 }}>{title}</div>{children}</div>;
+  const Field = ({ label, children }) => <div style={{ marginBottom:14 }}><label style={S.label}>{label}</label>{children}</div>;
+  const Toggle = ({ val, onChange, label }) => (
+    <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+      <div onClick={onChange} style={{ width:42, height:22, borderRadius:11, background:val?settings.accentColor:"rgba(255,255,255,0.1)", cursor:"pointer", position:"relative", transition:"background 0.2s", flexShrink:0 }}>
+        <div style={{ width:16, height:16, borderRadius:"50%", background:"#fff", position:"absolute", top:3, left:val?23:3, transition:"left 0.2s" }} />
+      </div>
+      <span style={{ fontSize:13, color:"rgba(255,255,255,0.55)" }}>{label}</span>
+    </div>
+  );
+
+  return (
+    <div>
+      <Toast msg={toast} />
+      <Sec title="🎨 Branding">
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+          <Field label="Site Name"><input value={form.siteName} onChange={e=>setForm(f=>({...f,siteName:e.target.value}))} style={S.input} /></Field>
+          <Field label="Subtitle"><input value={form.siteSubtitle} onChange={e=>setForm(f=>({...f,siteSubtitle:e.target.value}))} style={S.input} /></Field>
+          <Field label="Accent Color">
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <input type="color" value={form.accentColor} onChange={e=>setForm(f=>({...f,accentColor:e.target.value}))} style={{ width:42, height:34, borderRadius:8, border:"none", cursor:"pointer", padding:2, background:"none" }} />
+              <input value={form.accentColor} onChange={e=>setForm(f=>({...f,accentColor:e.target.value}))} style={{ ...S.input, flex:1 }} />
+            </div>
+          </Field>
+          <Field label="Secondary Color">
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <input type="color" value={form.secondaryColor} onChange={e=>setForm(f=>({...f,secondaryColor:e.target.value}))} style={{ width:42, height:34, borderRadius:8, border:"none", cursor:"pointer", padding:2, background:"none" }} />
+              <input value={form.secondaryColor} onChange={e=>setForm(f=>({...f,secondaryColor:e.target.value}))} style={{ ...S.input, flex:1 }} />
+            </div>
+          </Field>
+        </div>
+      </Sec>
+
+      <Sec title="📝 Quiz Settings">
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 }}>
+          <Field label="Pass Mark (%)"><input type="number" min="0" max="100" value={form.passMarkPercent} onChange={e=>setForm(f=>({...f,passMarkPercent:Number(e.target.value)}))} style={S.input} /></Field>
+          <Field label={`Timer Duration (${form.timerMinutes} min)`}><input type="number" min="1" max="180" value={form.timerMinutes} onChange={e=>setForm(f=>({...f,timerMinutes:Number(e.target.value)}))} style={{ ...S.input, opacity:form.timerEnabled?1:0.4 }} disabled={!form.timerEnabled} /></Field>
+        </div>
+        <Toggle val={form.showDifficulty} onChange={()=>setForm(f=>({...f,showDifficulty:!f.showDifficulty}))} label="Show difficulty badges on quiz questions" />
+        <Toggle val={form.shuffleQuestions} onChange={()=>setForm(f=>({...f,shuffleQuestions:!f.shuffleQuestions}))} label="Shuffle question order each attempt" />
+        <Toggle val={form.timerEnabled} onChange={()=>setForm(f=>({...f,timerEnabled:!f.timerEnabled}))} label="Enable countdown timer for quiz" />
+      </Sec>
+
+      <Sec title="📢 Announcement Banner">
+        <Field label="Message"><input value={form.announcementText} onChange={e=>setForm(f=>({...f,announcementText:e.target.value}))} placeholder="e.g. Exams on March 15th — keep studying!" style={S.input} /></Field>
+        <Toggle val={form.announcementEnabled} onChange={()=>setForm(f=>({...f,announcementEnabled:!f.announcementEnabled}))} label="Show banner on site" />
+      </Sec>
+
+      <Sec title="🔐 Security">
+        <Field label="Admin Password"><input type="password" value={form.adminPassword||"admin123"} onChange={e=>setForm(f=>({...f,adminPassword:e.target.value}))} style={S.input} placeholder="admin123" /></Field>
+      </Sec>
+
+      <div style={{ marginBottom:14 }}>
+        <button style={S.primaryBtn({...settings,...form})} onClick={save}>💾 Save All Settings</button>
+      </div>
+
+      <Sec title="💾 Data Management">
+        <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:12 }}>
+          <button style={S.ghostBtn} onClick={exportData}>📤 Export Backup (.json)</button>
+          <label style={{ ...S.ghostBtn, cursor:"pointer", display:"inline-flex", alignItems:"center", padding:"11px 24px" }}>
+            📥 Import Backup
+            <input type="file" accept=".json" onChange={importData} style={{ display:"none" }} />
+          </label>
+          <button style={S.dangerBtn} onClick={resetAll}>⚠ Reset All Data</button>
+        </div>
+        <p style={{ fontSize:12, color:"rgba(255,255,255,0.2)", margin:0 }}>Export saves all questions, flashcards, notes, and settings as JSON. Import restores from a previous export file.</p>
+      </Sec>
+    </div>
+  );
+}
